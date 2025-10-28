@@ -7,7 +7,6 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { auth } from 'express-oauth2-jwt-bearer';
-import { promisify } from 'node:util';
 
 @Injectable()
 export class AuthorizationGuard implements CanActivate {
@@ -26,19 +25,25 @@ export class AuthorizationGuard implements CanActivate {
 
     const { req, res } = GqlExecutionContext.create(context).getContext();
 
-    const jwtCheck = promisify(
-      auth({
-        audience: this.AUTH0_AUDIENCE,
-        issuerBaseURL: this.AUTH0_DOMAIN,
-        tokenSigningAlg: 'RS256',
-      }),
-    );
+    const checkJwt = auth({
+      audience: this.AUTH0_AUDIENCE,
+      issuerBaseURL: this.AUTH0_DOMAIN,
+      tokenSigningAlg: 'RS256',
+    });
 
     try {
-      await jwtCheck(req, res);
+      await new Promise<void>((resolve, reject) => {
+        checkJwt(req, res, (err) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
+      });
       return true;
     } catch (err) {
-      throw new UnauthorizedException(err);
+      throw new UnauthorizedException(err.message);
     }
   }
 }
