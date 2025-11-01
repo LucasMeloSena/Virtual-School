@@ -37,4 +37,13 @@ export class EnrollmentsService {
       },
     });
   }
+
+  async createEnrollent(courseId: string, studentId: string) {
+    return await this.prisma.enrollment.create({
+      data: {
+        courseId,
+        studentId,
+      },
+    });
+  }
 }

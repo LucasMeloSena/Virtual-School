@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma/prisma.service';
+import { KafkaService } from 'src/messaging/kafka.service';
 
 interface CreatePurchaseParams {
   customerId: string;
@@ -8,7 +9,10 @@ interface CreatePurchaseParams {
 
 @Injectable()
 export class PurchasesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private kafka: KafkaService,
+  ) {}
 
   async listAllPurchases() {
     return await this.prisma.purchase.findMany({
@@ -36,11 +40,30 @@ export class PurchasesService {
       throw new BadRequestException('Product not found.');
     }
 
-    return await this.prisma.purchase.create({
+    const createdPurchase = await this.prisma.purchase.create({
       data: {
         customerId: purchase.customerId,
         productId: purchase.productId,
       },
     });
+
+    const customer = await this.prisma.customer.findUnique({
+      where: {
+        id: purchase.customerId,
+      },
+    });
+
+    this.kafka.emit('purchases.new-purchase', {
+      customer: {
+        authUserId: customer.authUserId,
+      },
+      product: {
+        id: product.id,
+        title: product.title,
+        slug: product.slug,
+      },
+    });
+
+    return createdPurchase;
   }
 }
