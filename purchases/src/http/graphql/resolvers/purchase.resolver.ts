@@ -36,7 +36,7 @@ export class PurchaseResolver {
 
   @Mutation(() => Purchase)
   @UseGuards(AuthorizationGuard)
-  async createPurchae(
+  async createPurchase(
     @Args('data') data: CreatePurchaseInput,
     @CurrentUser() user: AuthUser,
   ) {
@@ -50,7 +50,7 @@ export class PurchaseResolver {
       });
     }
 
-    return await this.purchaseService.creatPurchase({
+    return await this.purchaseService.createPurchase({
       productId: data.productId,
       customerId: customer.id,
     });
